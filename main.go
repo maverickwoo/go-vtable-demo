@@ -1,0 +1,31 @@
+package main
+
+import (
+	"flag"
+	"fmt"
+
+	"github.com/maverickwoo/go-vtable-demo/shape"
+	"github.com/maverickwoo/go-vtable-demo/shape/rectangle"
+	"github.com/maverickwoo/go-vtable-demo/shape/square"
+)
+
+func main() {
+	flag.BoolVar(&shape.Bug, "b", false, "Set to show runtime bug.")
+	flag.Parse()
+
+	// Manufacture two values; we spell out their types for clarity.
+	var s1 *rectangle.T = rectangle.New("s1", 6, 7)
+	var s2 *square.T = square.New("s2", 8)
+
+	fmt.Printf("Demo:\t\t\t%s\n", s1) // Static rectangle.String().
+	s1.Print()                        // Static rectangle.Print(), promoted.
+	_ = s1.Area()                     // Static rectangle.Area().
+	fmt.Println()
+
+	fmt.Printf("Demo:\t\t\t%s\n", s2) // Static square.String().
+	s2.Print()                        // Static square.Print(), promoted.
+	_ = s2.Area()                     // Static square.Area().
+	fmt.Println()
+
+	fmt.Println("Try running with -b for a crash.")
+}
