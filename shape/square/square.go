@@ -51,5 +51,10 @@ func (t *T) Buuuuug() { // In square, we misspell this method.
 	return
 }
 
+// Default1 is a method to provide a default implementation for this subtree.
+func (t *T) Default1() string {
+	return "square.Default1"
+}
+
 // Useless assertion: this will compile and will not catch the typo above.
 var _ shape.VTable = new(T)

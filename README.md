@@ -11,6 +11,12 @@ Please see the comment in the source code and
 [![GoDoc](https://godoc.org/github.com/maverickwoo/go-vtable-demo?status.svg)](https://godoc.org/github.com/maverickwoo/go-vtable-demo)
 for more information.
 
+Also, please see [this Reddit
+post](https://www.reddit.com/r/golang/comments/83qboe/the_vtable_pattern_in_go/)
+and [this golang-nuts
+thread](https://groups.google.com/forum/#!topic/golang-nuts/5FFiKxzDCDc) for
+more discussion.
+
 # Design
 
 Suppose we want to implement a base `shape` package that
@@ -45,22 +51,24 @@ func (t *T) Print(a Areaer) {
 // [...]
 ```
 
-But this is clunky to use since now we need to call `s.Print(s)`, assuming `s`
-is the descendant under consideration.
+But this is clunky to use since, assuming `s` is the descendant under
+consideration, we need to call `s.Print(s)` at a call site and we need to make a
+distinction between `t` and `a` inside `Print`.
 
 ## `VTable` implementation of condition 3
 
 The design in this demo project solves this problem by embedding an interface
 value spelled `VTable` in `shape.T`, which is in turn embedded by value in
 `rectangle.T`. By putting `Area()` in `shape.VTable` and making sure that
-`rectangle.T.VTable` has the dynamic type `rectangle` (see `rectangle.New`), a
-call to `t.Area()` in `shape.Print` would get dispatched to `rectangle.Area()`,
+`rectangle.T.VTable` has the dynamic type `rectangle.T` (see `rectangle.New`), a
+call to `t.Area()` in `shape.Print` would be dispatched to `rectangle.Area()`,
 thus achieving conditions 1 through 3 in a seamless manner.
 
-From a client's perspective, given a rectangle `s`, the calls to `s.Print()` and
-`s.Area()` are seamless
+However, note that the embedded interface value adds two words. For small
+structs, say the nodes in an AST, this amount of space overhead may be
+prohibitively expensive.
 
-## `Dynamic()` wrapper
+## `Dynamic()` wrapper vs. `VTable`
 
 A further enhancement is to introduce the `Dynamic()` method in `VTable`. This
 simple wrapper wraps a descendant value in an interface value of type `VTable`
@@ -69,6 +77,23 @@ this demo project, this is demonstrated by the use of the `%#v` verb. But one
 may also consider Go's own `template.Execute()` when implementing an MVC where
 `shape` stands in for an abstract model and `rectangle` and `square` stand in
 for concrete models.
+
+In the common cases where each descendant has its `Dynamic` method returns the
+receiver, such as in `rectangle.Dynamic`, the `Dynamic()` declaration in the
+interface is redundant: in `shape`, we can just replace `t.Dynamic()` with
+`t.VTable`.
+
+However, there may also be niche cases where we may prefer the `Dynamic()`
+method of a descendant to return a `VTable` pointing to an ancestor of it. One
+plausible example is demonstrated in `rectangle/wide`, where the `wide`
+descendant wants to always expose its identically-shaped data in the type of
+`rectangle.T`. This may be desirable to clients that performs serialization.
+
+(As for the structural reason of why `wide` exists in its location in the
+hierarchy, notice that the factory method of `wide` ensures an invariant, and we
+may imagine that some methods of `rectangle` may have a more efficient
+implementation given the invariant and so we may want to override them in
+`wide`.)
 
 ## Typos can lead to a runtime crash
 
@@ -105,10 +130,11 @@ ok  	github.com/maverickwoo/go-vtable-demo	8.782s
 
 * Please remember to run this with `-b` to see the runtime crash.
 
-* This `VTable` pattern is intended for a very specific dynamic dispatch
+* This `VTable` pattern is intended for a very specific dynamic-dispatch
   scenario as explained above. Briefly, it is when a base package has a need to
-  call descendant-provided methods. Normal uses of interface is fine for many
-  other scenarios.
+  call descendant-provided methods and the application does not mind the space
+  overhead. For all other cases, exposing functions that accept an interface
+  argument should be preferred.
 
 * I have not studied the performance implications of this pattern at the
   instruction level yet, but the overhead in benchmark seems reasonable. For
