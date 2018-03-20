@@ -11,16 +11,20 @@ import "fmt"
 // T is the exported type of shape.
 type T struct {
 	VTable        // Embedded interface value to implement dynamic dispatch.
-	Name   string // Example struct field shared by all implementations.
+	Name   string // Example exported field shared by all implementations.
+	border string // Example unexported field shared by all implementations.
+	fill   string // Ditto.
 }
 
 // VTable is the exported interface type for implementing dynamic dispatch.
 type VTable interface {
-	Dynamic() VTable  // Let methods in shape get t's dynamic type.
-	Area() int        // Example virtual method that works.
-	Bug()             // Example virtual method to demo runtime bug.
-	Default0() string // Example virtual method to demo override.
-	Default1() string // Example virtual method to demo override.
+	Dynamic() VTable         // Controlled approach to get t's dynamic type.
+	Area() int               // Example virtual method that just works.
+	Bug()                    // Example virtual method to demo runtime bug.
+	Default0() string        // Example virtual method to demo override.
+	Default1() string        // Example virtual method to demo override.
+	SetBorder(string) VTable // Example virtual method to demo chaining.
+	SetFill(string) VTable   // Example virtual method to demo chaining.
 }
 
 var Bug = false
@@ -69,4 +73,18 @@ func (t *T) Print() {
 // t.Default1() in shape is a dynamic call without surprise.
 func (t *T) Default0() string {
 	return "shape.Default0"
+}
+
+// SetBorder is a method demonstrating how to set an unexported field in a
+// chainable method.
+func (t *T) SetBorder(s string) VTable {
+	t.border = s
+	return t
+}
+
+// SetFill is a method demonstrating how to set an unexported field in a
+// chainable method.
+func (t *T) SetFill(s string) VTable {
+	t.fill = s
+	return t
 }
